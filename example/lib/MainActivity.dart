@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:residemenu/residemenu.dart' as menu;
 import 'package:residemenu/residemenu.dart';
 
 class MainActivity extends StatefulWidget {
@@ -11,17 +12,18 @@ class MainActivity extends StatefulWidget {
 
 class _MainActivityState extends State<MainActivity>
     with TickerProviderStateMixin {
-  MenuController _menuController;
+  late menu.MenuController _menuController;
 
   Widget buildItem(String msg1) {
     return new Material(
       color: Colors.transparent,
       child: new InkWell(
-        child: ResideMenuItem(
+        child: menu.ResideMenuItem(
             title: msg1, icon: const Icon(Icons.home, color: Colors.grey)),
         onTap: () {
-          Scaffold.of(context)
-              .showSnackBar(new SnackBar(content: new Text('你点击了$msg1')));
+
+          // Scaffold.of(context)
+          //     .sh(new SnackBar(content: new Text('你点击了$msg1')));
         },
       ),
     );
@@ -36,14 +38,14 @@ class _MainActivityState extends State<MainActivity>
 
   @override
   Widget build(BuildContext context) {
-    return new ResideMenu.scaffold(
+    return new menu.ResideMenu.scaffold(
       enable3dRotate: true,
       controller: _menuController,
       decoration: new BoxDecoration(
           image: new DecorationImage(
               image: new AssetImage("images/menu_background.png"),
               fit: BoxFit.none)),
-      leftScaffold: new MenuScaffold(
+      leftScaffold: new menu.MenuScaffold(
         header: new ConstrainedBox(
           constraints: new BoxConstraints(maxHeight: 80.0, maxWidth: 80.0),
           child: new CircleAvatar(
@@ -59,7 +61,7 @@ class _MainActivityState extends State<MainActivity>
           buildItem("菜单五")
         ],
       ),
-      rightScaffold: new MenuScaffold(
+      rightScaffold: new menu.MenuScaffold(
         header: new CircleAvatar(
           backgroundImage: new AssetImage('images/author.jpeg'),
           radius: 40.0,
@@ -148,6 +150,6 @@ class _MainActivityState extends State<MainActivity>
     // TODO: implement initState
     super.initState();
     _menuController =
-        new MenuController(vsync: this, direction: ScrollDirection.LEFT);
+        new menu.MenuController(vsync: this, direction: ScrollDirection.LEFT);
   }
 }

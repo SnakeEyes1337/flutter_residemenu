@@ -6,15 +6,14 @@
 
 library residemenu;
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 
 typedef void OnOpen(bool isLeft);
 typedef void OnClose();
 typedef void OnOffsetChange(double offset);
 
 enum ScrollDirection { LEFT, RIGHT, BOTH }
+
 enum ScrollState { ScrollToLeft, NONE, ScrollToRight }
 
 class ResideMenu extends StatefulWidget {
@@ -22,59 +21,59 @@ class ResideMenu extends StatefulWidget {
   final Widget child;
 
   //left or right Menu View
-  final Widget leftView, rightView;
+  final Widget? leftView, rightView;
 
   //shadow elevation
   final double elevation;
 
   // it will control the menu Action,such as openMenu,closeMenu
-  final MenuController controller;
+  final MenuController? controller;
 
   // used to set bottom bg and color
   final BoxDecoration decoration;
 
-  final OnOpen onOpen;
+  final OnOpen? onOpen;
 
-  final OnClose onClose;
+  final OnClose? onClose;
 
   final bool enableScale, enableFade, enable3dRotate;
 
-  final OnOffsetChange onOffsetChange;
+  final OnOffsetChange? onOffsetChange;
 
   ResideMenu.scaffold(
-      {@required this.child,
-      Widget leftBuilder,
-      MenuScaffold leftScaffold,
-      MenuScaffold rightScaffold,
-      this.decoration: const BoxDecoration(),
-      this.elevation: 12.0,
+      {required this.child,
+      Widget? leftBuilder,
+      MenuScaffold? leftScaffold,
+      MenuScaffold? rightScaffold,
+      this.decoration = const BoxDecoration(),
+      this.elevation = 12.0,
       this.onOpen,
-      this.enableScale: true,
-      this.enableFade: true,
-      this.enable3dRotate: false,
+      this.enableScale = true,
+      this.enableFade = true,
+      this.enable3dRotate = false,
       this.onClose,
       this.onOffsetChange,
       this.controller,
-      Key key})
+      Key? key})
       : assert(child != null),
         leftView = leftScaffold,
         rightView = rightScaffold,
         super(key: key);
 
   ResideMenu.custom(
-      {@required this.child,
+      {required this.child,
       this.leftView,
       this.rightView,
-      this.decoration: const BoxDecoration(color: const Color(0xff0000)),
-      this.elevation: 12.0,
+      this.decoration = const BoxDecoration(color: const Color(0xff0000)),
+      this.elevation = 12.0,
       this.onOpen,
       this.onClose,
-      this.enable3dRotate: false,
-      this.enableScale: true,
-      this.enableFade: true,
+      this.enable3dRotate = false,
+      this.enableScale = true,
+      this.enableFade = true,
       this.onOffsetChange,
       this.controller,
-      Key key})
+      Key? key})
       : assert(child != null),
         super(key: key);
 
@@ -86,7 +85,7 @@ class _ResideMenuState extends State<ResideMenu>
     with SingleTickerProviderStateMixin {
   //determine width
   double _width = 0.0;
-  MenuController _controller;
+  late MenuController _controller;
   ValueNotifier<ScrollState> _scrollState =
       ValueNotifier<ScrollState>(ScrollState.NONE);
 
@@ -116,7 +115,7 @@ class _ResideMenuState extends State<ResideMenu>
             ? ScrollState.ScrollToLeft
             : ScrollState.ScrollToRight;
     if (widget.onOffsetChange != null) {
-      widget.onOffsetChange(_controller.value.abs());
+      widget.onOffsetChange!(_controller.value.abs());
     }
   }
 
@@ -124,15 +123,15 @@ class _ResideMenuState extends State<ResideMenu>
     if (status == AnimationStatus.completed) {
       if (_controller.value == 1.0) {
         if (widget.onOpen != null) {
-          widget.onOpen(true);
+          widget.onOpen!(true);
         }
       } else if (_controller.value == -1.0) {
         if (widget.onOpen != null) {
-          widget.onOpen(false);
+          widget.onOpen!(false);
         }
       } else {
         if (widget.onClose != null) {
-          widget.onClose();
+          widget.onClose!();
         }
       }
     }
@@ -193,78 +192,80 @@ class _ResideMenuState extends State<ResideMenu>
   Widget build(BuildContext context) {
     return new LayoutBuilder(builder: (context, cons) {
       _width = cons.biggest.width;
+
+      final List<Widget> widgets = [];
+      if (_scrollState.value != ScrollState.NONE) {
+        widgets.add(Container(
+          decoration: widget.decoration,
+        ));
+      }
+      if (_scrollState.value != ScrollState.NONE) {
+        widgets.add(_MenuTransition(
+          offset: _controller,
+          child: new Container(
+              margin: new EdgeInsets.only(
+                  left: (_scrollState.value == ScrollState.ScrollToRight
+                      ? cons.biggest.width * 0.3
+                      : 0.0),
+                  right: (_scrollState.value == ScrollState.ScrollToLeft
+                      ? cons.biggest.width * 0.3
+                      : 0.0)),
+              child: _scrollState.value == ScrollState.ScrollToLeft
+                  ? widget.leftView
+                  : widget.rightView),
+        ));
+      }
+      widgets.add(
+        _ContentTransition(
+          enableScale: widget.enableScale,
+          enable3D: widget.enable3dRotate,
+          child: new Stack(
+            children: <Widget>[
+              Container(
+                child: widget.child,
+                decoration: new BoxDecoration(boxShadow: <BoxShadow>[
+                  new BoxShadow(
+                    color: const Color(0xcc000000),
+                    offset: const Offset(-2.0, 2.0),
+                    blurRadius: widget.elevation * 0.66,
+                  ),
+                ]),
+              ),
+              _scrollState.value != ScrollState.NONE
+                  ? AnimatedBuilder(
+                      animation: _controller,
+                      builder: (c, w) {
+                        return GestureDetector(
+                          child: Container(
+                            width: cons.biggest.width,
+                            height: cons.biggest.height,
+                            color: new Color.fromARGB(
+                                !widget.enableFade
+                                    ? 0
+                                    : (125 * _controller.value.abs()).toInt(),
+                                0,
+                                0,
+                                0),
+                          ),
+                          onTap: () {
+                            _controller.closeMenu();
+                          },
+                        );
+                      },
+                    )
+                  : SizedBox.shrink(),
+            ].where((child) => child != null).toList(),
+          ),
+          menuOffset: _controller,
+        ),
+      );
+
       return WillPopScope(
         child: GestureDetector(
           onPanUpdate: _onScrollMove,
           onPanEnd: _onScrollEnd,
           child: new Stack(
-            children: <Widget>[
-              _scrollState.value != ScrollState.NONE
-                  ? new Container(
-                      decoration: widget.decoration,
-                    )
-                  : null,
-              _scrollState.value != ScrollState.NONE
-                  ? _MenuTransition(
-                      offset: _controller,
-                      child: new Container(
-                          margin: new EdgeInsets.only(
-                              left: (_scrollState.value ==
-                                      ScrollState.ScrollToRight
-                                  ? cons.biggest.width * 0.3
-                                  : 0.0),
-                              right: (_scrollState.value ==
-                                      ScrollState.ScrollToLeft
-                                  ? cons.biggest.width * 0.3
-                                  : 0.0)),
-                          child: _scrollState.value == ScrollState.ScrollToLeft
-                              ? widget.leftView
-                              : widget.rightView),
-                    )
-                  : null,
-              _ContentTransition(
-                  enableScale: widget.enableScale,
-                  enable3D: widget.enable3dRotate,
-                  child: new Stack(
-                    children: <Widget>[
-                      Container(
-                        child: widget.child,
-                        decoration: new BoxDecoration(boxShadow: <BoxShadow>[
-                          new BoxShadow(
-                            color: const Color(0xcc000000),
-                            offset: const Offset(-2.0, 2.0),
-                            blurRadius: widget.elevation * 0.66,
-                          ),
-                        ]),
-                      ),
-                      _scrollState.value != ScrollState.NONE
-                          ? AnimatedBuilder(
-                              animation: _controller,
-                              builder: (c, w) {
-                                return GestureDetector(
-                                  child: Container(
-                                    width: cons.biggest.width,
-                                    height: cons.biggest.height,
-                                    color: new Color.fromARGB(
-                                        !widget.enableFade
-                                            ? 0
-                                            : (125 * _controller.value.abs())
-                                                .toInt(),
-                                        0,
-                                        0,
-                                        0),
-                                  ),
-                                  onTap: () {
-                                    _controller.closeMenu();
-                                  },
-                                );
-                              },
-                            )
-                          : null,
-                    ].where((child) => child != null).toList(),
-                  ),
-                  menuOffset: _controller),
-            ].where((child) => child != null).toList(),
+            children: <Widget>[].where((child) => child != null).toList(),
           ),
         ),
         onWillPop: () async {
@@ -291,19 +292,19 @@ class ResideMenuItem extends StatelessWidget {
   final double midSpacing, leftSpacing, rightSpacing;
 
   const ResideMenuItem(
-      {Key key,
-      this.title: "菜单物品",
-      this.titleStyle: const TextStyle(
+      {Key? key,
+      this.title = "菜单物品",
+      this.titleStyle = const TextStyle(
           inherit: true, color: const Color(0xffdddddd), fontSize: 15.0),
-      this.icon: const Text(""),
-      this.right: const Icon(
+      this.icon = const Text(""),
+      this.right = const Icon(
         Icons.arrow_forward_ios,
         color: Colors.grey,
       ),
-      this.height: 50.0,
-      this.leftSpacing: 15.0,
-      this.rightSpacing: 50.0,
-      this.midSpacing: 30.0});
+      this.height = 50.0,
+      this.leftSpacing = 15.0,
+      this.rightSpacing = 50.0,
+      this.midSpacing = 30.0});
 
   @override
   Widget build(BuildContext context) {
@@ -342,8 +343,11 @@ class _MenuTransition extends AnimatedWidget {
 
   final Animation<double> offset;
 
-  _MenuTransition({@required this.child, this.offset, Key key})
-      : super(key: key, listenable: offset);
+  _MenuTransition({
+    required this.child,
+    required this.offset,
+    Key? key,
+  }) : super(key: key, listenable: offset);
 
   @override
   Widget build(BuildContext context) {
@@ -367,18 +371,18 @@ class _MenuTransition extends AnimatedWidget {
 class _ContentTransition extends AnimatedWidget {
   final Widget child;
 
-  final bool enableScale;
-  final bool enable3D;
+  final bool? enableScale;
+  final bool? enable3D;
 
   _ContentTransition(
-      {@required this.child,
-      @required Animation<double> menuOffset,
-      Key key,
+      {required this.child,
+      required Animation<double> menuOffset,
+      Key? key,
       this.enable3D,
       this.enableScale})
       : super(key: key, listenable: menuOffset);
 
-  Animation<double> get menuOffset => listenable;
+  Animation<double> get menuOffset => listenable as Animation<double>;
 
   @override
   Widget build(BuildContext context) {
@@ -387,12 +391,12 @@ class _ContentTransition extends AnimatedWidget {
       double width = cons.biggest.width;
       double val = menuOffset.value;
       final Matrix4 transform = new Matrix4.identity();
-      if (enable3D) {
+      if (enable3D ?? false) {
         transform.setEntry(3, 2, 0.0008);
         transform.rotateY(val * 0.8);
         transform.transposeRotation();
       }
-      if (enableScale) {
+      if (enableScale ?? false) {
         transform.scale(1.0 - 0.25 * val.abs(), 1 - 0.25 * val.abs(), 1.0);
       }
 
@@ -411,9 +415,9 @@ class MenuController extends AnimationController {
   bool _isOpenRight = false;
 
   MenuController(
-      {TickerProvider vsync,
-      ScrollDirection direction: ScrollDirection.LEFT,
-      Duration openDuration: const Duration(milliseconds: 300)})
+      {required TickerProvider vsync,
+      ScrollDirection direction = ScrollDirection.LEFT,
+      Duration openDuration = const Duration(milliseconds: 300)})
       : super(
             vsync: vsync,
             lowerBound: direction == ScrollDirection.LEFT ? 0.0 : -1.0,
@@ -449,12 +453,12 @@ class MenuScaffold extends StatelessWidget {
   final double topMargin;
 
   MenuScaffold(
-      {Key key,
-      @required this.children,
-      this.topMargin: 100.0,
-      Widget header,
-      Widget footer,
-      this.itemExtent: 40.0})
+      {Key? key,
+      required this.children,
+      this.topMargin = 100.0,
+      Widget? header,
+      Widget? footer,
+      this.itemExtent = 40.0})
       : assert(children != null),
         header = header ?? new Container(height: 20.0),
         footer = footer ?? new Container(height: 20.0),
