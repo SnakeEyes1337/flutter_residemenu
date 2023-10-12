@@ -27,7 +27,7 @@ class ResideMenu extends StatefulWidget {
   final double elevation;
 
   // it will control the menu Action,such as openMenu,closeMenu
-  final MenuController? controller;
+  final MenuController controller;
 
   // used to set bottom bg and color
   final BoxDecoration decoration;
@@ -53,10 +53,9 @@ class ResideMenu extends StatefulWidget {
       this.enable3dRotate = false,
       this.onClose,
       this.onOffsetChange,
-      this.controller,
+      required this.controller,
       Key? key})
-      : assert(child != null),
-        leftView = leftScaffold,
+      : leftView = leftScaffold,
         rightView = rightScaffold,
         super(key: key);
 
@@ -72,10 +71,9 @@ class ResideMenu extends StatefulWidget {
       this.enableScale = true,
       this.enableFade = true,
       this.onOffsetChange,
-      this.controller,
+      required this.controller,
       Key? key})
-      : assert(child != null),
-        super(key: key);
+      : super(key: key);
 
   @override
   _ResideMenuState createState() => new _ResideMenuState();
@@ -85,7 +83,7 @@ class _ResideMenuState extends State<ResideMenu>
     with SingleTickerProviderStateMixin {
   //determine width
   double _width = 0.0;
-  late MenuController _controller;
+   late MenuController _controller;
   ValueNotifier<ScrollState> _scrollState =
       ValueNotifier<ScrollState>(ScrollState.NONE);
 
@@ -99,6 +97,7 @@ class _ResideMenuState extends State<ResideMenu>
   }
 
   void _onScrollEnd(DragEndDetails details) {
+
     if (_controller.value > 0.5) {
       _controller.openMenu(true);
     } else if (_controller.value < -0.5) {
@@ -109,6 +108,7 @@ class _ResideMenuState extends State<ResideMenu>
   }
 
   void _handleScrollChange() {
+
     _scrollState.value = _controller.value == 0.0
         ? ScrollState.NONE
         : _controller.value > 0.0
@@ -120,6 +120,7 @@ class _ResideMenuState extends State<ResideMenu>
   }
 
   void _handleScrollEnd(AnimationStatus status) {
+
     if (status == AnimationStatus.completed) {
       if (_controller.value == 1.0) {
         if (widget.onOpen != null) {
@@ -149,10 +150,9 @@ class _ResideMenuState extends State<ResideMenu>
     final MenuController newController = widget.controller ??
         MenuController(vsync: this, direction: ScrollDirection.LEFT);
     if (newController == null || newController == _controller) return;
-    if (_controller != null)
-      _controller
-        ..removeListener(_handleScrollChange)
-        ..removeStatusListener(_handleScrollEnd);
+    _controller
+      ..removeListener(_handleScrollChange)
+      ..removeStatusListener(_handleScrollEnd);
     _controller = newController;
     _controller
       ..addListener(_handleScrollChange)
@@ -162,6 +162,7 @@ class _ResideMenuState extends State<ResideMenu>
   @override
   void initState() {
     // TODO: implement initState
+    _controller = widget.controller;
     _scrollState.addListener(() {
       setState(() {});
     });
@@ -172,11 +173,12 @@ class _ResideMenuState extends State<ResideMenu>
   void dispose() {
     // TODO: implement dispose
     _scrollState.dispose();
+
     _controller
-      ..removeListener(_handleScrollChange)
+      ?..removeListener(_handleScrollChange)
       ..removeStatusListener(_handleScrollEnd);
     if (widget.controller == null) {
-      _controller.dispose();
+      _controller?.dispose();
     }
     super.dispose();
   }
@@ -193,28 +195,32 @@ class _ResideMenuState extends State<ResideMenu>
     return new LayoutBuilder(builder: (context, cons) {
       _width = cons.biggest.width;
 
+
       final List<Widget> widgets = [];
-      if (_scrollState.value != ScrollState.NONE) {
+      //if (_scrollState.value != ScrollState.NONE) {
         widgets.add(Container(
           decoration: widget.decoration,
         ));
-      }
-      if (_scrollState.value != ScrollState.NONE) {
+      //}
+      // if (_scrollState.value != ScrollState.NONE) {
+        // widgets.add(Container(height: 100, width: 100,color:Colors.red,));
         widgets.add(_MenuTransition(
           offset: _controller,
-          child: new Container(
-              margin: new EdgeInsets.only(
+          child:  Container(
+              margin:  EdgeInsets.only(
                   left: (_scrollState.value == ScrollState.ScrollToRight
                       ? cons.biggest.width * 0.3
                       : 0.0),
                   right: (_scrollState.value == ScrollState.ScrollToLeft
                       ? cons.biggest.width * 0.3
                       : 0.0)),
-              child: _scrollState.value == ScrollState.ScrollToLeft
-                  ? widget.leftView
-                  : widget.rightView),
+              child: widget.leftView
+              // _scrollState.value == ScrollState.ScrollToLeft
+              //     ? widget.leftView
+              //     : widget.rightView),
+          ),
         ));
-      }
+      // }
       widgets.add(
         _ContentTransition(
           enableScale: widget.enableScale,
@@ -264,13 +270,16 @@ class _ResideMenuState extends State<ResideMenu>
         child: GestureDetector(
           onPanUpdate: _onScrollMove,
           onPanEnd: _onScrollEnd,
-          child: new Stack(
-            children: <Widget>[].where((child) => child != null).toList(),
+          child:  Container(
+            height: MediaQuery.of(context).size.height,
+            child: Stack(
+              children: widgets.where((child) => child != null).toList(),
+            ),
           ),
         ),
         onWillPop: () async {
-          if (_controller.value != 0) {
-            _controller.closeMenu();
+          if (_controller?.value != 0) {
+            _controller?.closeMenu();
             return false;
           }
           return true;
@@ -357,7 +366,8 @@ class _MenuTransition extends AnimatedWidget {
       double height = cons.biggest.height;
       final Matrix4 transform = new Matrix4.identity()
         ..scale(2 - offset.value.abs(), 2 - offset.value.abs(), 1.0);
-      return Opacity(
+      return
+      Opacity(
         opacity: offset.value.abs(),
         child: new Transform(
             transform: transform,
@@ -425,8 +435,8 @@ class MenuController extends AnimationController {
             duration: openDuration,
             value: 0.0);
 
-  Future<void> openMenu(bool left) {
-    return animateTo(left ? 1.0 : -1.0).then((_) {
+  Future<void> openMenu(bool left) async {
+    return await animateTo(left ? 1.0 : -1.0).then((_) {
       _isOpenLeft = left;
     });
   }
@@ -459,8 +469,7 @@ class MenuScaffold extends StatelessWidget {
       Widget? header,
       Widget? footer,
       this.itemExtent = 40.0})
-      : assert(children != null),
-        header = header ?? new Container(height: 20.0),
+      : header = header ?? new Container(height: 20.0),
         footer = footer ?? new Container(height: 20.0),
         super(key: key);
 
